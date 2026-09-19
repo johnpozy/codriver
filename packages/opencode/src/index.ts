@@ -1,4 +1,5 @@
-import { injectAuto, type AutoConfig } from "./config.js";
+import { injectAuto, stashConfig, type AutoConfig } from "./config.js";
+import { createChatMessageHandler } from "./chat.js";
 
 /**
  * Codriver opencode plugin — legacy v1 format (spike A, verified against
@@ -9,9 +10,11 @@ import { injectAuto, type AutoConfig } from "./config.js";
  */
 export const CodriverPlugin = async () => ({
   config: async (cfg: AutoConfig) => {
+    // Stash FIRST, unconditionally — before any gating or try-catch: the
+    // chat.message hook receives no cfg parameter and reads the stash to
+    // derive the per-turn catalog.
+    stashConfig(cfg);
     injectAuto(cfg, process.env);
   },
-  "chat.message": async () => {
-    // no-op placeholder — todo 9 implements the model rewrite
-  },
+  "chat.message": createChatMessageHandler(),
 });

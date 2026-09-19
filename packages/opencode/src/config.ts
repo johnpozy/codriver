@@ -82,3 +82,25 @@ export function injectAuto(cfg: AutoConfig, env: EnvLike): void {
     }
   }
 }
+
+/**
+ * The cfg stash. The `chat.message` hook receives no cfg parameter (spike
+ * B hook signature), so the config hook wrapper (index.ts) stashes the cfg
+ * reference as its FIRST action — before any gating or try-catch — and the
+ * chat hook reads it back at hook time to derive the per-turn catalog.
+ *
+ * `stashConfig(undefined)` clears the stash (the test boundary); a chat
+ * turn with no stash treats the catalog as empty, and route() then returns
+ * a terminal decision whose rewrite contract still applies.
+ */
+let stashed: AutoConfig | undefined;
+
+/** Stash the cfg reference; the config hook's first, unconditional action. */
+export function stashConfig(cfg: AutoConfig | undefined): void {
+  stashed = cfg;
+}
+
+/** The cfg stashed by the config hook; undefined if that hook never ran. */
+export function stashedConfig(): AutoConfig | undefined {
+  return stashed;
+}
