@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "plugin": ["./spike-rewrite.mjs"],
+  "provider": {
+    "codriver": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Codriver (synthetic)",
+      "options": {
+        "baseURL": "http://127.0.0.1:9372/v1",
+        "apiKey": "none"
+      },
+      "models": {
+        "auto": {
+          "name": "Auto (routed by Codriver)"
+        }
+      }
+    },
+    "mockllm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "MockLLM (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:9371/v1",
+        "apiKey": "none"
+      },
+      "models": {
+        "mock-model": {
+          "name": "Mock Model"
+        }
+      }
+    }
+  }
+}
