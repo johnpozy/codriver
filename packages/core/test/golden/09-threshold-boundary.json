@@ -1,0 +1,28 @@
+{
+  "name": "happy choice: confidence exactly at the 0.55 threshold commits (boundary is not below)",
+  "stateInput": {
+    "agent": "build",
+    "mode": "build",
+    "text": "Review this pull request and leave constructive comments on the error handling.",
+    "case": "happy-boundary"
+  },
+  "config": {
+    "fleet": [
+      { "id": "anthropic/claude-opus", "description": "deep reasoning", "tags": ["reasoning"] },
+      { "id": "openai/gpt-5.5", "description": "fast coding" },
+      { "id": "google/gemini-3-pro", "description": "long context" }
+    ],
+    "route_threshold": 0.55
+  },
+  "catalog": ["anthropic/claude-opus", "openai/gpt-5.5", "google/gemini-3-pro"],
+  "scenario": {
+    "model": "jev-1.13.0",
+    "usage": { "input_tokens": 58, "output_tokens": 9 },
+    "answers": {
+      "route": { "choice": "anthropic/claude-opus", "confidence": 0.55, "probabilities": { "anthropic/claude-opus": 0.55, "fallback": 0.45 } },
+      "complexity": { "score": 1, "confidence": 0.6 },
+      "domain": { "choice": "other", "confidence": 0.7, "probabilities": { "other": 0.7, "explain-question": 0.3 } }
+    }
+  },
+  "expected": { "model": { "providerID": "anthropic", "modelID": "claude-opus" }, "usedFallback": false, "reason": "jev-choice" }
+}

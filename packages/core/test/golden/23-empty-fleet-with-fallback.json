@@ -1,0 +1,23 @@
+{
+  "name": "terminal no-valid-fleet: empty fleet with a configured fallback routes to splitModelId(fallback)",
+  "stateInput": {
+    "agent": "build",
+    "mode": "build",
+    "text": "Anything at all — the fleet is empty so the client is never called.",
+    "case": "empty-fleet-fallback"
+  },
+  "config": {
+    "fleet": [],
+    "fallback": "openai/gpt-5.5",
+    "route_threshold": 0.55
+  },
+  "catalog": ["anthropic/claude-opus", "openai/gpt-5.5", "google/gemini-3-pro"],
+  "scenario": {
+    "model": "jev-1.13.0",
+    "usage": { "input_tokens": 0, "output_tokens": 0 },
+    "answers": {
+      "route": { "choice": "anthropic/claude-opus", "confidence": 0.9, "probabilities": { "anthropic/claude-opus": 0.9, "fallback": 0.1 } }
+    }
+  },
+  "expected": { "model": { "providerID": "openai", "modelID": "gpt-5.5" }, "usedFallback": true, "reason": "no-valid-fleet" }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "timeout: a single-entry fleet fails over to its only entry",
+  "stateInput": {
+    "agent": "build",
+    "mode": "build",
+    "text": "Regenerate the API client from the updated OpenAPI spec.",
+    "case": "timeout-single-fleet"
+  },
+  "config": {
+    "fleet": [
+      { "id": "mistral/mistral-large", "description": "balanced multilingual" }
+    ],
+    "route_threshold": 0.55
+  },
+  "catalog": ["mistral/mistral-large"],
+  "scenario": {
+    "error": { "kind": "timeout", "message": "Jev request timed out after 1500ms" }
+  },
+  "expected": { "model": { "providerID": "mistral", "modelID": "mistral-large" }, "usedFallback": true, "reason": "timeout" }
+}

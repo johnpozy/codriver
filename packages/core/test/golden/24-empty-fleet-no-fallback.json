@@ -1,0 +1,22 @@
+{
+  "name": "terminal no-targets: empty fleet and no fallback returns the codriver/auto passthrough marker",
+  "stateInput": {
+    "agent": "build",
+    "mode": "build",
+    "text": "Anything at all — no fleet and no fallback means no target exists.",
+    "case": "empty-fleet-no-fallback"
+  },
+  "config": {
+    "fleet": [],
+    "route_threshold": 0.55
+  },
+  "catalog": ["anthropic/claude-opus", "openai/gpt-5.5", "google/gemini-3-pro"],
+  "scenario": {
+    "model": "jev-1.13.0",
+    "usage": { "input_tokens": 0, "output_tokens": 0 },
+    "answers": {
+      "route": { "choice": "anthropic/claude-opus", "confidence": 0.9, "probabilities": { "anthropic/claude-opus": 0.9, "fallback": 0.1 } }
+    }
+  },
+  "expected": { "model": { "providerID": "codriver", "modelID": "auto" }, "usedFallback": true, "reason": "no-targets" }
+}

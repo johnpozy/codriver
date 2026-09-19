@@ -1,0 +1,27 @@
+{
+  "name": "happy choice: general agent on a two-entry fleet routes the second entry",
+  "stateInput": {
+    "agent": "general",
+    "mode": "general",
+    "text": "Summarize the meeting notes from the platform review and draft a follow-up email to the attendees.",
+    "case": "happy-general-agent"
+  },
+  "config": {
+    "fleet": [
+      { "id": "mistral/mistral-large", "description": "balanced multilingual" },
+      { "id": "moonshot/kimi-k3", "description": "long documents" }
+    ],
+    "route_threshold": 0.55
+  },
+  "catalog": ["mistral/mistral-large", "moonshot/kimi-k3"],
+  "scenario": {
+    "model": "jev-1.13.0",
+    "usage": { "input_tokens": 80, "output_tokens": 12 },
+    "answers": {
+      "route": { "choice": "moonshot/kimi-k3", "confidence": 0.82, "probabilities": { "moonshot/kimi-k3": 0.82, "mistral/mistral-large": 0.1, "fallback": 0.08 } },
+      "complexity": { "score": 0, "confidence": 0.7 },
+      "domain": { "choice": "docs", "confidence": 0.9, "probabilities": { "docs": 0.9, "other": 0.1 } }
+    }
+  },
+  "expected": { "model": { "providerID": "moonshot", "modelID": "kimi-k3" }, "usedFallback": false, "reason": "jev-choice" }
+}

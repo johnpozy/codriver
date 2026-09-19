@@ -1,0 +1,28 @@
+{
+  "name": "no-fit: the explicit fallback option at high confidence routes the first valid entry",
+  "stateInput": {
+    "agent": "build",
+    "mode": "build",
+    "text": "Order more coffee for the office kitchen.",
+    "case": "no-fit-option"
+  },
+  "config": {
+    "fleet": [
+      { "id": "anthropic/claude-opus", "description": "deep reasoning", "tags": ["reasoning"] },
+      { "id": "openai/gpt-5.5", "description": "fast coding" },
+      { "id": "google/gemini-3-pro", "description": "long context" }
+    ],
+    "route_threshold": 0.55
+  },
+  "catalog": ["anthropic/claude-opus", "openai/gpt-5.5", "google/gemini-3-pro"],
+  "scenario": {
+    "model": "jev-1.13.0",
+    "usage": { "input_tokens": 40, "output_tokens": 6 },
+    "answers": {
+      "route": { "choice": "fallback", "confidence": 0.9, "probabilities": { "fallback": 0.9, "anthropic/claude-opus": 0.1 } },
+      "complexity": { "score": 0, "confidence": 0.9 },
+      "domain": { "choice": "other", "confidence": 0.95, "probabilities": { "other": 0.95, "docs": 0.05 } }
+    }
+  },
+  "expected": { "model": { "providerID": "anthropic", "modelID": "claude-opus" }, "usedFallback": true, "reason": "no-fit" }
+}
