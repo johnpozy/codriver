@@ -12,18 +12,10 @@
  *      decision line reason "jev-choice", model mockllm/mock-model.
  *  (b) fixture-timeout — CODRIVER_JEV=fixture + CODRIVER_JEV_SCENARIO=
  *      timeout: the run STILL completes on the fallback (the never-block
- *      promise at whole-system level).
- *
- *      SPEC DEVIATION (verified empirically before this test was
- *      written): the wired plugin constructs FixtureJevClient() with an
- *      EMPTY scenario table, so CODRIVER_JEV_SCENARIO=timeout surfaces as
- *      an unknown-scenario Error, which route() maps to reason "error" —
- *      NOT "timeout". The JevError("timeout") mapping is only reachable
- *      when scenarios are injected at construction (as core's own unit
- *      tests do), which packages/opencode/src does not do; fixing that
- *      is outside this test's scope. The contract this case proves —
- *      exit 0, assistant output rendered, usedFallback true, fallback
- *      model — holds exactly as specified.
+ *      promise at whole-system level), with the decision line carrying
+ *      reason "timeout" (the wired plugin's bare FixtureJevClient
+ *      recognizes the standard scenario names, so route() maps the
+ *      JevError("timeout") to reason "timeout").
  *
  *  (c) http-mode — CODRIVER_JEV=http + TYPESAFE_API_URL=<mockjev> +
  *      TYPESAFE_API_KEY=codriver-test-dummy (a DUMMY value, REQUIRED so
@@ -368,13 +360,13 @@ async function runPipeline(name: string, caseEnv: CaseEnvBuilder): Promise<Pipel
       expect(run.stdout).toContain("ok");
       expect(existsSync(join(run.tmp, "opencode", "opencode.db"))).toBe(true);
 
-      // The decision line: fallback used, fallback model. See the file
-      // header SPEC DEVIATION note — the observed reason is "error"
-      // (unknown-scenario Error from the bare FixtureJevClient the wired
-      // plugin constructs), not the spec's "timeout".
+      // The decision line: fallback used, fallback model. The wired
+      // plugin's bare FixtureJevClient recognizes the standard "timeout"
+      // scenario name, so route() maps the JevError("timeout") to
+      // reason "timeout".
       expect(run.decisionLines.length).toBeGreaterThan(0);
       expect(lastDecision(run)).toMatchObject({
-        reason: "error",
+        reason: "timeout",
         usedFallback: true,
         model: { providerID: "mockllm", modelID: "mock-model" },
       });

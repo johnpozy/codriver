@@ -20,15 +20,32 @@ export interface FixtureJevClientOptions {
 }
 
 /**
+ * Standard scenario names recognized by a bare `new FixtureJevClient()`.
+ * These map 1:1 to the `JevError` kinds so the documented
+ * `CODRIVER_JEV_SCENARIO` env var works in the wired plugin path (which
+ * constructs the client with no explicit scenario table). `route()` folds
+ * `http`/`parse` into reason "error"; `timeout`/`no-key` map to their own
+ * reasons. A name NOT in this table still throws loudly (see evaluate).
+ */
+const DEFAULT_SCENARIOS: Record<string, JevScenario> = {
+  timeout: new JevError("timeout", "Jev request timed out (fixture)"),
+  "no-key": new JevError("no-key", "Jev API key missing (fixture)"),
+  http: new JevError("http", "Jev HTTP error (fixture)", { status: 500 }),
+  parse: new JevError("parse", "Jev response parse error (fixture)"),
+};
+
+/**
  * Deterministic in-process Jev stand-in for zero-paid-call testing.
- * Same input → same output; no randomness, no network.
+ * Same input → same output; no randomness, no network. A bare client
+ * (no explicit `scenarios`) recognizes the standard scenario names via
+ * `DEFAULT_SCENARIOS`, so `CODRIVER_JEV_SCENARIO` works out of the box.
  */
 export class FixtureJevClient implements JevClient {
   private readonly scenarios: Record<string, JevScenario>;
   private readonly matcher: ((req: JevRequest) => string | undefined) | undefined;
 
   constructor(options: FixtureJevClientOptions = {}) {
-    this.scenarios = options.scenarios ?? {};
+    this.scenarios = options.scenarios ?? DEFAULT_SCENARIOS;
     this.matcher = options.matcher;
   }
 
