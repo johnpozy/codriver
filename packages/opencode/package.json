@@ -1,10 +1,33 @@
 {
   "name": "codriver-opencode",
   "version": "0.1.0",
-  "private": true,
+  "description": "opencode adapter for Codriver: a per-turn model-routing plugin — pick Auto, Jev picks the model.",
+  "keywords": [
+    "opencode",
+    "model-routing",
+    "jev",
+    "auto"
+  ],
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "codriver": "*"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "bun test",

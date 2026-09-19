@@ -1,9 +1,26 @@
 {
   "name": "codriver",
   "version": "0.1.0",
+  "description": "Framework-agnostic per-turn model-routing core: Jev client, fleet config, routing policy, and decision logging.",
+  "keywords": [
+    "opencode",
+    "model-routing",
+    "jev",
+    "auto"
+  ],
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "files": [
     "dist",
     "README.md"
