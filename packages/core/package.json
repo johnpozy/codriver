@@ -1,0 +1,17 @@
+{
+  "name": "codriver",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit",
+    "lint": "oxlint src"
+  }
+}

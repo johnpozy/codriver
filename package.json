@@ -1,0 +1,19 @@
+{
+  "name": "codriver-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "nx run-many -t test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "@types/node": "^24.13.6",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "nx": "^23.2.1",
+    "oxlint": "^1.83.0",
+    "typescript": "^7.0.2"
+  }
+}

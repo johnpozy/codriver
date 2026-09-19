@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*"],
+    "src": ["{projectRoot}/src/**/*.ts"],
+    "tests": ["{projectRoot}/test/**/*.ts"],
+    "tsconfig": ["{projectRoot}/tsconfig*.json"]
+  },
+  "targetDefaults": {
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["src", "tsconfig"]
+    },
+    "typecheck": {
+      "cache": true,
+      "inputs": ["src", "tests", "tsconfig"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["src"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": ["src", "tests"]
+    }
+  }
+}
