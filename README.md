@@ -56,7 +56,7 @@ Once published to npm, the file URL is replaced by the package name:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["codriver-opencode"]
+  "plugin": ["@johnpozy/codriver-opencode"]
 }
 ```
 
@@ -175,6 +175,6 @@ value is redacted from the decision log.
 
 ## License
 
-MIT © 2026 johnp — see [LICENSE](packages/core/LICENSE). The npm package
-names `codriver` and `codriver-opencode` were confirmed available on
-2026-09-19.
+MIT © 2026 johnp — see [LICENSE](packages/core/LICENSE). The packages are
+published to GitHub Packages as `@johnpozy/codriver` and
+`@johnpozy/codriver-opencode` (scope = GitHub owner).

@@ -14,7 +14,7 @@
  *   before provider catalog assembly. Per-turn validation and the terminal
  *   fallback live in route() (todo 6).
  */
-import { loadConfig, type EnvLike } from "codriver";
+import { loadConfig, type EnvLike } from "@johnpozy/codriver";
 import { AUTO_MODEL } from "./auto.js";
 
 /**

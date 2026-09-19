@@ -8,7 +8,7 @@ import {
   type JevClient,
   type JevRequest,
   type JevResult,
-} from "codriver";
+} from "@johnpozy/codriver";
 import { AUTO_MODEL } from "../src/auto.js";
 import { stashConfig } from "../src/config.js";
 import {

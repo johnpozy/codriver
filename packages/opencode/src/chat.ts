@@ -30,7 +30,7 @@ import {
   splitModelId,
   type CodriverConfig,
   type JevClient,
-} from "codriver";
+} from "@johnpozy/codriver";
 import { AUTO_MODEL } from "./auto.js";
 import { stashedConfig, type AutoConfig } from "./config.js";
 

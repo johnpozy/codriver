@@ -6,7 +6,7 @@ The contract below describes what the routing core promises, what an adapter plu
 
 Two things this guide is deliberately not:
 
-- It is markdown only. There is no `Adapter` base class, no SDK, no framework shim, no runtime abstraction layer. Each port writes its own thin, hand-rolled hook code that calls into `@codriver/core` (the `codriver` npm package produced from `packages/core/`). That is the entire integration surface.
+- It is markdown only. There is no `Adapter` base class, no SDK, no framework shim, no runtime abstraction layer. Each port writes its own thin, hand-rolled hook code that calls into `@johnpozy/codriver` (the core npm package produced from `packages/core/`). That is the entire integration surface.
 - It makes no promises about agents we have not researched. Hermes, openclaw, and pi each need their own hook-surface research pass before any code is committed, the same shape as the librarian run recorded in `.omo/drafts/codriver.md` Findings 1 through 11 for opencode. The checklist at the end is the recipe, not the result.
 
 ## Core contract

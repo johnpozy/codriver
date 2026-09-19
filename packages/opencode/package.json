@@ -1,5 +1,5 @@
 {
-  "name": "codriver-opencode",
+  "name": "@johnpozy/codriver-opencode",
   "version": "0.1.0",
   "description": "opencode adapter for Codriver: a per-turn model-routing plugin — pick Auto, Jev picks the model.",
   "keywords": [
@@ -21,12 +21,15 @@
   "engines": {
     "node": ">=18"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "files": [
     "dist",
     "README.md"
   ],
   "peerDependencies": {
-    "codriver": "*"
+    "@johnpozy/codriver": "*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -35,6 +38,6 @@
     "lint": "oxlint src"
   },
   "devDependencies": {
-    "codriver": "*"
+    "@johnpozy/codriver": "*"
   }
 }
