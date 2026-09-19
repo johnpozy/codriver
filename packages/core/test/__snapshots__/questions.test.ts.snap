@@ -1,0 +1,30 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`the domain question is snapshot-frozen (fixed taxonomy, one of each) 1`] = `
+{
+  "criteria": {
+    "data-processing": "transforming, analyzing, or querying data",
+    "debug": "diagnosing or fixing a bug, error, or failure",
+    "docs": "writing or updating documentation",
+    "explain-question": "asking how something works or seeking an explanation",
+    "implement-feature": "building a new feature or capability",
+    "other": "none of the other categories",
+    "planning": "planning, designing, or breaking down work",
+    "refactor": "restructuring existing code without changing behavior",
+  },
+  "instructions": "Classify the primary domain of this user turn",
+  "type": "choice",
+}
+`;
+
+exports[`the route question is snapshot-frozen (instructions + criteria shape) 1`] = `
+{
+  "criteria": {
+    "anthropic/claude-opus": "deep reasoning",
+    "fallback": "no fleet option is clearly suitable",
+    "openai/gpt-5.5": "fast coding (tags: cheap)",
+  },
+  "instructions": "Pick the model from the fleet that should handle this user turn",
+  "type": "choice",
+}
+`;
