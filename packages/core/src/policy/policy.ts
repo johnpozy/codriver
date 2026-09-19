@@ -14,8 +14,8 @@
 import type { CodriverConfig } from "../config/config.js";
 import { DEFAULT_ROUTE_THRESHOLD } from "../config/config.js";
 import { JEV_MODEL, JevError } from "../jev/client.js";
-import type { JevClient, JevResult } from "../jev/client.js";
-import type { ChoiceAnswer } from "../jev/types.js";
+import type { JevClient } from "../jev/client.js";
+import type { ChoiceAnswer, JevResult } from "../jev/types.js";
 import { FALLBACK_OPTION, buildQuestionPack } from "../state/questions.js";
 import { buildRoutingState } from "../state/state.js";
 import type { RoutingStateInput } from "../state/state.js";
