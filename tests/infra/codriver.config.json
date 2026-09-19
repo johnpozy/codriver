@@ -1,0 +1,8 @@
+{
+  "fleet": [
+    { "id": "mockllm/mock-model", "description": "echo assistant" },
+    { "id": "openai/gpt-5.5", "description": "dummy" }
+  ],
+  "fallback": "mockllm/mock-model",
+  "log_path": "{{LOG_PATH}}"
+}
