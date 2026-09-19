@@ -1,0 +1,6 @@
+{
+  "fleet": [
+    { "id": "openai/gpt-5.5", "description": "fast coding" },
+    { "id": "anthropic/claude-opus", "description": "deep reasoning", "tags": ["reasoning"] }
+  ]
+}
