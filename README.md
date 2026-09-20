@@ -86,7 +86,7 @@ every adapter shares one fleet — from `~/.config/codriver/config.json`:
   "fallback": "anthropic/claude-sonnet-4-5",
   "route_threshold": 0.55,
   "route_timeout_ms": 1500,
-  "log_path": "/home/johnp/.local/share/codriver/decisions.jsonl"
+  "log_path": "~/.local/share/codriver/decisions.jsonl"
 }
 ```
 
