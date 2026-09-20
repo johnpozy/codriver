@@ -33,6 +33,7 @@ import {
 } from "@johnpozy/codriver";
 import { AUTO_MODEL } from "./auto.js";
 import { stashedConfig, type AutoConfig } from "./config.js";
+import { proxyModeActive } from "./gateway.js";
 
 /** Minimal structural view of the chat.message hook input (spike B). */
 export interface ChatMessageInput {
@@ -68,6 +69,7 @@ export function validCatalogFromConfig(cfg: AutoConfig): Set<string> {
   const catalog = new Set<string>();
   for (const [providerID, provider] of Object.entries(cfg.provider ?? {})) {
     if (providerID === AUTO_MODEL.providerID) continue;
+    if (provider?.models === undefined || provider.models === null) continue;
     for (const modelID of Object.keys(provider.models)) {
       catalog.add(`${providerID}/${modelID}`);
     }
@@ -75,12 +77,15 @@ export function validCatalogFromConfig(cfg: AutoConfig): Set<string> {
   return catalog;
 }
 
-/** The first text part's text, else "" — the only raw text Jev ever sees. */
-function firstTextPart(parts: ChatMessageOutput["parts"]): string {
+/** The current user message text, else "" — the only raw text Jev ever sees.
+ * We take the LAST text part because opencode passes the full conversation
+ * parts array, and the current turn is the final user message. */
+function currentTextPart(parts: ChatMessageOutput["parts"]): string {
+  let text = "";
   for (const part of parts) {
-    if (part.type === "text" && typeof part.text === "string") return part.text;
+    if (part.type === "text" && typeof part.text === "string") text = part.text;
   }
-  return "";
+  return text;
 }
 
 /**
@@ -88,44 +93,53 @@ function firstTextPart(parts: ChatMessageOutput["parts"]): string {
  * client is selected per turn from env (fixture when forced OR keyless —
  * the mock-first gate), and the config is re-loaded from disk at hook time
  * so an emptied fleet is observable on the very next turn.
+ *
+ * Routing gate: the hook routes the Auto sentinel and any model already in
+ * the configured fleet. The latter handles opencode carrying the previous
+ * turn's concrete model forward into the next message. A model outside the
+ * fleet is treated as an explicit user choice and left untouched.
+ *
+ * Proxy mode (upstream env var set, or a fleet entry prefixed with a
+ * builtin gateway name): this hook no-ops entirely. The message model stays
+ * codriver/auto (the TUI indicator stays on Auto) and the loopback gateway
+ * owns all routing when the request arrives.
  */
 export function createChatMessageHandler(deps: ChatMessageDeps = {}): ChatMessageHandler {
   return async (input, output) => {
-    // (1) Only Auto turns are routed; anything else costs ZERO Jev calls.
+    let config: CodriverConfig;
+    try {
+      config = loadConfig(process.env);
+    } catch {
+      config = {
+        fleet: [],
+        route_threshold: DEFAULT_ROUTE_THRESHOLD,
+        route_timeout_ms: DEFAULT_ROUTE_TIMEOUT_MS,
+      };
+    }
+
+    if (proxyModeActive(process.env, config)) return;
+
+    const cfg = stashedConfig();
+    const catalog = cfg !== undefined ? validCatalogFromConfig(cfg) : new Set<string>();
+    for (const entry of config.fleet) {
+      catalog.add(entry.id);
+    }
+
     const current = output.message.model;
-    if (
-      current?.providerID !== AUTO_MODEL.providerID ||
-      current?.modelID !== AUTO_MODEL.modelID
-    ) {
+    const currentId =
+      current?.providerID !== undefined && current?.modelID !== undefined
+        ? `${current.providerID}/${current.modelID}`
+        : undefined;
+    const isAuto =
+      current?.providerID === AUTO_MODEL.providerID &&
+      current?.modelID === AUTO_MODEL.modelID;
+    if (!isAuto && (currentId === undefined || !catalog.has(currentId))) {
       return;
     }
 
-    let config: CodriverConfig | undefined;
     try {
-      // (2) Catalog from the cfg stashed by the config hook (hook-time
-      // truth). No stash (config hook never ran) = empty catalog: route()
-      // then returns a terminal decision, and the rewrite below still
-      // follows the terminal contract.
-      const cfg = stashedConfig();
-      const catalog = cfg !== undefined ? validCatalogFromConfig(cfg) : new Set<string>();
-
-      // (3) Config acquired AT HOOK TIME — per-turn, never cached. loadConfig
-      // itself never throws on a missing or malformed file (it returns the
-      // no-fleet config); this catch covers ConfigError on schema-violating
-      // JSON, substituted with the same no-fleet equivalence so route()
-      // returns its terminal decision through the normal path.
-      try {
-        config = loadConfig(process.env);
-      } catch {
-        config = {
-          fleet: [],
-          route_threshold: DEFAULT_ROUTE_THRESHOLD,
-          route_timeout_ms: DEFAULT_ROUTE_TIMEOUT_MS,
-        };
-      }
-
-      // (4) Mock-first client selection: fixture when forced by env OR when
-      // no API key exists — the plugin works end-to-end keyless.
+      // (4) Mock-first client selection: fixture when forced OR keyless —
+      // the plugin works end-to-end keyless.
       const useFixture = jevMode(process.env) === "fixture" || !process.env.TYPESAFE_API_KEY;
       const client: JevClient =
         deps.client ?? (useFixture ? new FixtureJevClient() : new HttpJevClient());
@@ -139,7 +153,7 @@ export function createChatMessageHandler(deps: ChatMessageDeps = {}): ChatMessag
         client,
         stateInput: {
           agent: input.agent ?? "unknown",
-          text: firstTextPart(output.parts),
+          text: currentTextPart(output.parts),
           catalog: [],
         },
       });

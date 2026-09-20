@@ -39,6 +39,8 @@ const ENV_KEYS: readonly string[] = [
   "CODRIVER_JEV_SCENARIO",
   "TYPESAFE_API_KEY",
   "XDG_DATA_HOME",
+  "CODRIVER_UPSTREAM_BASE_URL",
+  "CODRIVER_UPSTREAM_API_KEY",
 ];
 
 const savedEnv: Record<string, string | undefined> = {};
@@ -51,6 +53,8 @@ beforeEach(() => {
   // (a missing file = loadConfig's no-fleet return), decision logs under tmp.
   delete process.env.TYPESAFE_API_KEY;
   delete process.env.CODRIVER_JEV_SCENARIO;
+  delete process.env.CODRIVER_UPSTREAM_BASE_URL;
+  delete process.env.CODRIVER_UPSTREAM_API_KEY;
   process.env.CODRIVER_CONFIG = join(tmp, "missing.json");
   process.env.XDG_DATA_HOME = tmp;
 });
@@ -96,10 +100,11 @@ function stashCatalog(...models: string[]): void {
 
 function makeOutput(
   model: { providerID: string; modelID: string } = { ...AUTO_MODEL },
+  parts: ChatMessageOutput["parts"] = [{ type: "text", text: "hello, route me" }],
 ): ChatMessageOutput {
   return {
     message: { model: { ...model } },
-    parts: [{ type: "text", text: "hello, route me" }],
+    parts,
   };
 }
 
@@ -175,7 +180,7 @@ class GetterThrowClient implements JevClient {
   }
 }
 
-test("non-Auto model: zero Jev calls, model and parts untouched", async () => {
+test("explicit non-fleet model: zero Jev calls, model and parts untouched", async () => {
   process.env.CODRIVER_CONFIG = writeConfig({
     fleet: fleet("openai/gpt-5.5"),
     fallback: "openai/gpt-5.5",
@@ -183,13 +188,34 @@ test("non-Auto model: zero Jev calls, model and parts untouched", async () => {
   stashCatalog("openai/gpt-5.5");
   const spy = new CountingClient(new FixtureJevClient());
   const handler = createChatMessageHandler({ client: spy });
-  const output = makeOutput({ providerID: "openai", modelID: "gpt-5.5" });
+  const output = makeOutput({ providerID: "anthropic", modelID: "claude-haiku" });
   const partsBefore = JSON.stringify(output.parts);
   await handler({ agent: "build" }, output);
   console.log("no-op evaluate calls:", spy.calls);
   expect(spy.calls).toBe(0);
-  expect(output.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.5" });
+  expect(output.message.model).toEqual({ providerID: "anthropic", modelID: "claude-haiku" });
   expect(JSON.stringify(output.parts)).toBe(partsBefore);
+});
+
+test("fleet model carried forward from previous Auto turn is re-routed", async () => {
+  process.env.CODRIVER_CONFIG = writeConfig({
+    fleet: fleet("openai/gpt-5.5", "anthropic/claude-opus-4.6"),
+    fallback: "openai/gpt-5.5",
+    log_path: join(tmp, "decisions.jsonl"),
+  });
+  stashCatalog("openai/gpt-5.5", "anthropic/claude-opus-4.6");
+  const spy = new CountingClient(
+    new FixtureJevClient({
+      scenarios: { pick: choiceScenario("anthropic/claude-opus-4.6") },
+      matcher: () => "pick",
+    }),
+  );
+  const handler = createChatMessageHandler({ client: spy });
+  // opencode carried the previous routed model forward; the plugin still routes.
+  const output = makeOutput({ providerID: "openai", modelID: "gpt-5.5" });
+  await handler({ agent: "build" }, output);
+  expect(spy.calls).toBe(1);
+  expect(output.message.model).toEqual({ providerID: "anthropic", modelID: "claude-opus-4.6" });
 });
 
 test("happy rewrite: fixture choice X → out model X, exact {providerID, modelID} shape", async () => {
@@ -274,7 +300,7 @@ test("never-leave-auto: poisoned clients throwing in three different places", as
   }
 });
 
-test("no-valid-fleet terminal: all-catalog-INVALID fleet → hook rewrites to the terminal fallback model", async () => {
+test("fleet entries are valid even when not in the stashed provider catalog", async () => {
   process.env.CODRIVER_CONFIG = writeConfig({
     fleet: fleet("openai/gpt-5.5"), // not in the stashed catalog
     fallback: "anthropic/claude-opus-4.6",
@@ -284,10 +310,10 @@ test("no-valid-fleet terminal: all-catalog-INVALID fleet → hook rewrites to th
   const handler = createChatMessageHandler();
   const output = makeOutput();
   await handler({ agent: "build" }, output);
-  expect(output.message.model).toEqual({ providerID: "anthropic", modelID: "claude-opus-4.6" });
+  expect(output.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.5" });
   const decisions = readDecisions(join(tmp, "decisions.jsonl"));
-  expect(decisions[0]?.reason).toBe("no-valid-fleet");
-  expect(decisions[0]?.usedFallback).toBe(true);
+  expect(decisions[0]?.reason).toBe("jev-choice");
+  expect(decisions[0]?.usedFallback).toBe(false);
 });
 
 test("no-valid-fleet terminal: empty fleet + configured fallback → rewrites to splitModelId(fallback)", async () => {
@@ -356,6 +382,60 @@ test("no stashed cfg (config hook never ran): empty catalog → terminal decisio
   const output = makeOutput();
   await handler({}, output);
   expect(output.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.5" });
+});
+
+test("current user message is used, not the first text part in the conversation", async () => {
+  process.env.CODRIVER_CONFIG = writeConfig({
+    fleet: fleet("openai/gpt-5.5", "anthropic/claude-opus-4.6"),
+    fallback: "openai/gpt-5.5",
+    log_path: join(tmp, "decisions.jsonl"),
+  });
+  stashCatalog("openai/gpt-5.5", "anthropic/claude-opus-4.6");
+  let capturedText = "";
+  const client: JevClient = {
+    async evaluate(req: JevRequest): Promise<JevResult> {
+      capturedText = (req.state as { messagePreview?: string }).messagePreview ?? "";
+      return choiceScenario("anthropic/claude-opus-4.6");
+    },
+  };
+  const handler = createChatMessageHandler({ client });
+  const output = makeOutput(AUTO_MODEL, [
+    { type: "text", text: "Hello" },
+    { type: "text", text: "Refactor this 500-line module into a clean state machine" },
+  ]);
+  await handler({ agent: "build" }, output);
+  expect(capturedText).toBe("Refactor this 500-line module into a clean state machine");
+  const decisions = readDecisions(join(tmp, "decisions.jsonl"));
+  expect(decisions[0]?.statePreview).toBe("Refactor this 500-line module into a clean state machine");
+});
+
+test("proxy mode: upstream configured → zero Jev calls, model stays codriver/auto", async () => {
+  process.env.CODRIVER_UPSTREAM_BASE_URL = "http://127.0.0.1:9/v1";
+  process.env.CODRIVER_CONFIG = writeConfig({
+    fleet: fleet("openai/gpt-5.5"),
+    fallback: "openai/gpt-5.5",
+  });
+  stashCatalog("openai/gpt-5.5");
+  const spy = new CountingClient(new FixtureJevClient());
+  const handler = createChatMessageHandler({ client: spy });
+  const output = makeOutput();
+  await handler({ agent: "build" }, output);
+  expect(spy.calls).toBe(0);
+  expect(output.message.model).toEqual({ providerID: "codriver", modelID: "auto" });
+});
+
+test("auto proxy mode: gateway-prefixed fleet entry → hook no-ops without any env var", async () => {
+  process.env.CODRIVER_CONFIG = writeConfig({
+    fleet: fleet("vercel/anthropic/claude-opus-4"),
+    fallback: "vercel/anthropic/claude-opus-4",
+  });
+  stashCatalog("vercel/anthropic/claude-opus-4");
+  const spy = new CountingClient(new FixtureJevClient());
+  const handler = createChatMessageHandler({ client: spy });
+  const output = makeOutput();
+  await handler({ agent: "build" }, output);
+  expect(spy.calls).toBe(0);
+  expect(output.message.model).toEqual({ providerID: "codriver", modelID: "auto" });
 });
 
 test("validCatalogFromConfig: derives provider/model ids, excludes the codriver sentinel", () => {
