@@ -1,6 +1,7 @@
 {
   "name": "@johnpozy/codriver-opencode",
   "version": "0.1.0",
+  "repository": "https://github.com/johnpozy/codriver",
   "description": "opencode adapter for Codriver: a per-turn model-routing plugin — pick Auto, Jev picks the model.",
   "keywords": [
     "opencode",

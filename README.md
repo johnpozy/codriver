@@ -1,6 +1,11 @@
 # Codriver
 
+<p align="center">
+  <img src="docs/images/codriver.png" width="220" alt="Codriver, The model drives, Codriver calls the turn">
+</p>
+
 > The model drives, Codriver calls the turn.
+
 
 ## What / Why
 
