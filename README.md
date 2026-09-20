@@ -77,21 +77,42 @@ your opencode config with a `file://` absolute URL:
 
 (Adjust the path to your clone — it must be absolute.)
 
-Then define a fleet (see the next section) — Auto is only injected once at
-least one fleet entry exists — and verify:
+The plugin auto-creates a starter fleet on first run: it prefers models from
+your custom opencode providers (providers you define in `opencode.json` with a
+`models` field), and falls back to a built-in default fleet of common coding
+models if you have none. You can edit `~/.config/codriver/config.json`
+afterward. Verify:
 
 ```bash
 opencode models   # the list must contain: codriver/auto
 ```
 
-Pick **Auto — routed by Codriver** in the model picker and send a message.
-No `TYPESAFE_API_KEY`? The plugin runs keyless on a deterministic fixture
-client, so you can try the flow before signing up.
+### Part 3 — Set your Jev API key (optional)
 
+Codriver routes turns through TypeSafe AI's Jev model. For real routing decisions, set `TYPESAFE_API_KEY` in your shell profile:
+
+```bash
+# ~/.bashrc or ~/.zshrc
+export TYPESAFE_API_KEY="your-typesafe-ai-key"
+```
+
+If the key is unset, Codriver falls back to a deterministic fixture client — routing still works end-to-end for testing, but decisions are canned rather than from Jev.
+
+Pick **Auto — routed by Codriver** in the model picker and send a message.
 ## Codriver config
 
 Codriver reads its own config — deliberately outside any agent's config, so
-every adapter shares one fleet — from `~/.config/codriver/config.json`:
+every adapter shares one fleet — from `~/.config/codriver/config.json`.
+
+On first run, if this file is missing or has an empty fleet, the plugin
+auto-creates a starter fleet. In rewrite mode it prefers models from your
+custom opencode providers (providers you define in `opencode.json` with a
+`models` field), and falls back to a built-in default fleet of common coding
+models if you have none. In proxy mode (see below) the starter fleet always
+uses upstream model ids. You can edit the file afterward to add
+descriptions, tags, or remove models.
+
+Example config:
 
 ```json
 {
@@ -143,7 +164,72 @@ Environment variables:
 | `CODRIVER_CONFIG` | per turn, at config load | Full path of the config file (default `~/.config/codriver/config.json`). |
 | `CODRIVER_JEV` | per turn, at client selection | `fixture` forces the fixture client even when a key exists; anything else → the HTTP client. |
 | `CODRIVER_JEV_SCENARIO` | per request, by the fixture client | Selects a canned fixture scenario by name (testing). An unknown name fails loudly, never silently. |
+| `CODRIVER_UPSTREAM_BASE_URL` | at config load, per request | **Explicit proxy-mode switch + default upstream.** Set → proxy mode is on. Unset → proxy mode still activates automatically when any fleet entry is prefixed with a builtin gateway name (`vercel/`, `openrouter/`); otherwise rewrite mode. Also serves as the default upstream fleet ids with no matching prefix are forwarded to. |
+| `CODRIVER_UPSTREAM_API_KEY` | per request | The default upstream's API key in proxy mode; sent as `Authorization: Bearer <key>`. Per-prefix upstreams resolve their own keys (see below). |
+## Proxy mode (keep the picker on Auto)
 
+Default (rewrite mode): the plugin rewrites each turn's message model, and
+opencode's model indicator follows the routed model — opencode currently
+offers no plugin API to keep the picker on Auto while rewriting
+([#18667](https://github.com/anomalyco/opencode/issues/18667), closed as
+not planned).
+
+Proxy mode solves it by not rewriting at all. It activates explicitly (set
+`CODRIVER_UPSTREAM_BASE_URL` to any non-empty value) or automatically (any
+fleet entry prefixed with a builtin gateway name — `vercel/…`,
+`openrouter/…`). The injected `codriver` provider points at a loopback
+gateway the plugin runs inside the opencode process. Every completion
+request for `auto` arrives there; the gateway asks Jev which fleet entry
+fits the turn, resolves that entry's upstream, rewrites the request's
+`model` field, forwards it, and pipes the streaming response back
+untouched. The indicator stays on **Auto**; each turn's routed model is
+printed (`codriver: auto → anthropic/claude-opus-4 via vercel (jev-choice,
+0.9)`) and logged to the decision log as usual. Token usage accounting still
+works — the upstream response passes through verbatim.
+
+Fleet ids in proxy mode are `"<upstream>/<model>"` — the first path segment
+names the upstream, the rest is the model string forwarded to it. These are
+the SAME ids as opencode `provider/model` ids in rewrite mode, so one
+config file serves both modes:
+
+```json
+{
+  "fleet": [
+    { "id": "vercel/anthropic/claude-opus-4", "description": "deep reasoning, hard refactors" },
+    { "id": "vercel/openai/gpt-4o-mini", "description": "trivial tasks" },
+    { "id": "openrouter/z-ai/glm-4.6", "description": "fast everyday coding" }
+  ],
+  "fallback": "openrouter/z-ai/glm-4.6"
+}
+```
+
+Upstream resolution for the prefix, in order:
+
+1. **The same-named provider in your opencode config** — its `baseURL`, and
+   its `apiKey` (inline string or `{env: VAR}`) becomes the Bearer
+   credential. Any custom OpenAI-compatible provider works this way.
+2. **A builtin gateway registry entry** (`vercel` → `https://ai-gateway.vercel.sh/v1`,
+   `openrouter` → `https://openrouter.ai/api/v1`) — the key is read from
+   opencode's own `auth.json` for that provider (`type: "api"` entries
+   only; OAuth tokens are never touched).
+3. **No prefix match** → the WHOLE id is forwarded to the default upstream
+   (`CODRIVER_UPSTREAM_BASE_URL`, key `CODRIVER_UPSTREAM_API_KEY`).
+
+So a single-gateway user only needs the two env vars; a mixed
+vercel + openrouter user needs NOTHING extra (proxy mode auto-activates on
+the `vercel/`/`openrouter/` prefixed ids, and the keys come from `auth.json`
+once the providers are configured in opencode); and models scattered
+across direct provider APIs can each carry their own prefix. Keys are read
+lazily per request and never logged.
+
+Setup — with a `vercel/`- or `openrouter/`-prefixed fleet there is NO extra
+setup: proxy mode is automatic. Otherwise, enable it explicitly:
+
+```bash
+# ~/.bashrc or ~/.zshrc
+export TYPESAFE_API_KEY="your-typesafe-ai-key"
+export CODRIVER_UPSTREAM_BASE_URL="https://ai-gateway.vercel.sh/v1"
+```
 ## How Auto works
 
 1. The plugin injects a synthetic `codriver` provider with a single `auto`

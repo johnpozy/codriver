@@ -43,8 +43,40 @@ npx nx run opencode:build
 }
 ```
 
-Requires the `codriver` core (peer dependency) and a fleet config at
-`~/.config/codriver/config.json`. Tested against opencode v1.18.31 — see the
-repo root README for the full config reference, cost and privacy notes.
+### Set your Jev API key (optional)
+
+For real Jev routing decisions, set `TYPESAFE_API_KEY` in your shell profile:
+
+```bash
+# ~/.bashrc or ~/.zshrc
+export TYPESAFE_API_KEY="your-typesafe-ai-key"
+```
+
+If the key is unset, Codriver falls back to a deterministic fixture client —
+routing still works end-to-end for testing, but decisions are canned rather
+than from Jev.
+
+Requires the `codriver` core (peer dependency). Tested against opencode
+v1.18.31 — see the repo root README for the full config reference, cost and
+privacy notes.
+
+### Proxy mode (keep the model picker on Auto)
+
+Proxy mode activates automatically when any fleet entry is prefixed with a
+builtin gateway name (`vercel/…`, `openrouter/…`), or explicitly via
+`CODRIVER_UPSTREAM_BASE_URL`: the chat.message rewrite is disabled, the
+picker stays on **Auto**, and the plugin's loopback gateway routes each
+turn. Fleet ids are `"<upstream>/<model>"` — the prefix resolves to an
+upstream (your opencode provider's `baseURL` and `apiKey`, a builtin
+gateway registry entry keyed by opencode's `auth.json`, or the env-var
+default upstream), the tail is the model string forwarded there. See the
+repo root README ("Proxy mode") for the full resolution order and examples.
+
+On first run, if `~/.config/codriver/config.json` is missing or has an empty
+fleet, the plugin auto-creates a starter fleet. It prefers models from your
+custom opencode providers (providers you define in `opencode.json` with a
+`models` field), and falls back to a built-in default fleet of common coding
+models if you have none. You can edit the file afterward to add descriptions,
+tags, or remove models.
 
 MIT © 2026 johnp — see [LICENSE](LICENSE).
