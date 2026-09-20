@@ -1,0 +1,5 @@
+{
+  "fleet": [
+    { "id": "vercel/anthropic/claude-opus-4", "description": "deep reasoning" }
+  ]
+}
