@@ -2,7 +2,7 @@
  * The opencode `config` hook: inject the synthetic `codriver` provider with
  * its `auto` model so the user can pick "Auto" in the model picker.
  *
- * Contract (spike A, docs/notes/spike-a.md — verified against opencode
+ * Contract (spike A — verified against opencode
  * v1.18.31):
  * - the hook mutates the cached cfg in place BEFORE provider.ts reads
  *   `cfg.provider`, so the injected provider becomes enumerable;

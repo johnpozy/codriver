@@ -3,7 +3,7 @@
  * model on the outgoing user message to the concrete model the routing
  * core picked for this turn.
  *
- * Contract (spike B, docs/notes/spike-b.md — verified against opencode
+ * Contract (spike B — verified against opencode
  * v1.18.31): the hook fires inside createUserMessage AFTER part resolution
  * and BEFORE the message is persisted, so mutating `output.message.model`
  * survives and drives the session loop. The rewritten model is EXACTLY

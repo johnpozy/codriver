@@ -58,7 +58,7 @@ Six obligations, in order. Skip any one of them and the integration is broken in
 
 1. **Intercept model selection BEFORE the model is resolved.** Find your agent's equivalent of opencode's `chat.message` hook (the point where the user-turn's model id has been chosen by the picker but not yet resolved against the provider catalog). Any later and the routing decision cannot affect this turn; any earlier and you have no user text to route on. This is the single most important choice in the whole port and it is the one that requires per-agent research.
 
-2. **Present an "Auto" entry to the user.** Inject a synthetic provider+model pair into whatever mechanism your agent uses to enumerate selectable models. In opencode this is one `cfg.provider["codriver"] = {...}` block in the config hook (`packages/opencode/src/config.ts:60-84`). The injected entry needs only one model, the display name `"Auto — routed by Codriver"`, and `npm: "@ai-sdk/openai-compatible"` (or your host's nearest equivalent). Lazy registration matters: enumeration must not dial the dummy endpoint. Verified empirically in `docs/notes/spike-a.md`.
+2. **Present an "Auto" entry to the user.** Inject a synthetic provider+model pair into whatever mechanism your agent uses to enumerate selectable models. In opencode this is one `cfg.provider["codriver"] = {...}` block in the config hook (`packages/opencode/src/config.ts:60-84`). The injected entry needs only one model, the display name `"Auto — routed by Codriver"`, and `npm: "@ai-sdk/openai-compatible"` (or your host's nearest equivalent). Lazy registration matters: enumeration must not dial the dummy endpoint. Verified empirically against opencode v1.18.31 in both module formats.
 
 3. **Rewrite to a concrete model on every path except the documented `no-targets` passthrough.** When `route()` returns a decision, you overwrite the outgoing message's model field with `{ providerID: decision.model.providerID, modelID: decision.model.modelID }`. No exceptions other than `no-targets`. Reference shape: `packages/opencode/src/chat.ts:155-160` (the happy path) and `packages/opencode/src/chat.ts:151-154` (the passthrough guard).
 
@@ -82,7 +82,7 @@ export const CodriverPlugin = async () => ({
 });
 ```
 
-Single function export per the loader rule documented in `docs/notes/spike-a.md:55-58` (the loader throws on non-function exports). Everything else lives in the imported modules.
+Single function export — the opencode plugin loader throws on non-function exports. Everything else lives in the imported modules.
 
 ### Hook 1: config injection
 
@@ -96,7 +96,7 @@ The catch at `config.ts:78-83` is the never-throw boundary: any failure (includi
 
 The same file also exports the cfg stash (`config.ts:96-106`). The stash exists because the `chat.message` hook signature carries NO cfg parameter, so the config hook stashes the cfg reference FIRST, unconditionally, before any gating, via `stashConfig(cfg)`. The chat hook reads it back via `stashedConfig()`.
 
-The ordering and lazy registration contracts that make this safe are documented in `docs/notes/spike-a.md:24-34` (plugins run before `provider.ts` reads `cfg.provider`) and `docs/notes/spike-a.md:92-103` (enumeration never dials the baseURL).
+The ordering and lazy registration contracts that make this safe: plugins run before `provider.ts` reads `cfg.provider`, and enumeration never dials the baseURL.
 
 ### Hook 2: chat.message rewrite
 
@@ -107,11 +107,11 @@ The ordering and lazy registration contracts that make this safe are documented 
 3. **Per-turn loadConfig** (`chat.ts:117-125`). Always re-reads the file, never cached. A schema-violating JSON throws `ConfigError` from `loadConfig`; the inner catch substitutes the no-fleet equivalence so `route()` returns its terminal decision through the normal path.
 4. **Mock-first client selection** (`chat.ts:129-131`). `CODRIVER_JEV=fixture` forces the fixture client; absent `TYPESAFE_API_KEY` also forces fixture. The plugin works end-to-end keyless.
 5. **Call `route()`** (`chat.ts:136-145`). Note `stateInput.catalog: []` is intentional: `route()` supersedes the caller's catalog with the fleet derived from `config.fleet ∩ catalog`. See the policy comment at `packages/core/src/policy/policy.ts:81-83`.
-6. **Rewrite** (`chat.ts:151-160`). On `no-targets`, warn and leave the sentinel. On every other reason, overwrite `output.message.model` with the decision. `variant` is deliberately omitted; both forms survive persistence per `docs/notes/spike-b.md:88-95`.
+6. **Rewrite** (`chat.ts:151-160`). On `no-targets`, warn and leave the sentinel. On every other reason, overwrite `output.message.model` with the decision. `variant` is deliberately omitted; both forms survive persistence.
 7. **Decision log** (`chat.ts:163-166`). Fire-and-forget; never throws.
 8. **Never-throw catch** (`chat.ts:167-181`). If anything above throws (a poisoned client, a stashed cfg that has been mutated), the hook rewrites to a defensive fallback target if one can be computed, else mirrors the `no-targets` passthrough. Either way, no exception propagates.
 
-The rewrite-mechanism contract that makes step 6 durable is documented in `docs/notes/spike-b.md:133-146`: the `chat.message` hook fires inside `createUserMessage` after part resolution and before persistence, so the mutated `output.message.model` is persisted verbatim and drives the session loop. Session-level state (written before the hook fires) keeps showing `codriver/auto`, which is desired UX, while the message-level model carries the concrete rewrite.
+The rewrite-mechanism contract that makes step 6 durable: the `chat.message` hook fires inside `createUserMessage` after part resolution and before persistence, so the mutated `output.message.model` is persisted verbatim and drives the session loop. Session-level state (written before the hook fires) keeps showing `codriver/auto`, which is desired UX, while the message-level model carries the concrete rewrite.
 
 ## Config mapping
 
@@ -166,10 +166,10 @@ The numbered steps below are the recipe for the next agent author (hermes, openc
 
 | # | Step | Produces | Proof |
 |---|---|---|---|
-| 1 | Find the interception point: read the agent's source for where the user-turn's model id is finalized before provider resolution. | A hook or callback signature with access to `{sessionID, agent?, model?}` and a mutable `output.message.model`. | The hook's doc comment cites the agent's source file and line. spike-b.md:133-146 is the opencode shape. |
+| 1 | Find the interception point: read the agent's source for where the user-turn's model id is finalized before provider resolution. | A hook or callback signature with access to `{sessionID, agent?, model?}` and a mutable `output.message.model`. | The hook's doc comment cites the agent's source file and line. In opencode that is `createUserMessage` in the session module (fires after part resolution, before persistence). |
 | 2 | Catalog derivation: enumerate the agent's currently configured providers+models, excluding the synthetic Auto provider you are about to inject. | A `Set<string>` of `"provider/model"` ids per turn. | A unit test with two providers and the sentinel proves the sentinel is excluded. Reference: `packages/opencode/src/chat.ts:67-76`. |
 | 3 | Entry injection: add the synthetic provider with an "Auto" model to the agent's config layer. | One mutated config block, idempotent across re-entry. | `opencode models` (or the agent's enumeration command) lists `codriver/auto`; a second invocation is a no-op. Reference: `packages/opencode/src/config.ts:60-84`. |
-| 4 | Rewrite mechanism: in the hook, when the chosen model is the sentinel, call `route()` and overwrite the model field. | `output.message.model = { providerID, modelID }` on every path except `no-targets`. | End-to-end: a real user turn routed to a mock provider leaves the mock's id in persisted storage, not the sentinel. spike-b.md:44-82. |
+| 4 | Rewrite mechanism: in the hook, when the chosen model is the sentinel, call `route()` and overwrite the model field. | `output.message.model = { providerID, modelID }` on every path except `no-targets`. | End-to-end: a real user turn routed to a mock provider leaves the mock's id in persisted storage, not the sentinel. In opencode, persist-then-read proves the mutated field survives verbatim. |
 | 5 | Never-block tests including terminal cases: write tests for poisoned clients, schema-violating config, empty fleet with fallback, empty fleet no fallback. | Tests for `no-valid-fleet` rewrite and `no-targets` passthrough with a captured `console.warn`. | The suite passes with `bun test`; spy counts confirm zero Jev calls on non-Auto turns. Reference: `packages/opencode/test/chat.test.ts`. |
 | 6 | Golden set reuse: run the core's 24-fixture golden test against your adapter's `route()` invocation. | The same decision shapes the opencode adapter produces. Identical JSON. | `bun test packages/core/test/golden/` is green before and after your adapter is added. |
 
