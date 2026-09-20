@@ -23,22 +23,54 @@ lands on a documented fallback.
 
 ## Quickstart
 
-From a clone of this repo, build the adapter (this builds the `codriver` core
-first, then the opencode adapter):
+This plugin is published to GitHub Packages as
+`@johnpozy/codriver-opencode`.
+
+### Part 1 — Install (primary path)
+
+GitHub Packages hosts the package, so npm must be told where the
+`@johnpozy` scope lives.
+
+Add to `~/.npmrc` (create it if missing) this block:
+
+```ini
+@johnpozy:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:username=YOUR_GITHUB_USERNAME
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
+```
+
+Use a GitHub personal access token (classic) with the `read:packages`
+scope, see github.com, Settings, Developer settings, Personal access
+tokens.
+
+Then reference the plugin from your opencode config:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@johnpozy/codriver-opencode"]
+}
+```
+
+### Part 2 — Local development (secondary)
+
+**Or run from a local clone (development):**
+
+Build the adapter (this builds the `codriver` core first, then the opencode
+adapter):
 
 ```bash
 npx nx run opencode:build
 ```
 
-The built adapter entry is `packages/opencode/dist/index.js`. Reference it
-from your opencode config (`~/.config/opencode/opencode.json`, or a project
-`opencode.json`) with a `file://` absolute URL:
+Reference the built adapter entry `packages/opencode/dist/index.js` from
+your opencode config with a `file://` absolute URL:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
-    "file:///home/johnp/Documents/codriver/packages/opencode/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/codriver/packages/opencode/dist/index.js"
   ]
 }
 ```
@@ -55,15 +87,6 @@ opencode models   # the list must contain: codriver/auto
 Pick **Auto — routed by Codriver** in the model picker and send a message.
 No `TYPESAFE_API_KEY`? The plugin runs keyless on a deterministic fixture
 client, so you can try the flow before signing up.
-
-Once published to npm, the file URL is replaced by the package name:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@johnpozy/codriver-opencode"]
-}
-```
 
 ## Codriver config
 

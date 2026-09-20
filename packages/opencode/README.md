@@ -5,6 +5,29 @@ The [opencode](https://opencode.ai) adapter for
 synthetic `codriver` provider whose single **Auto** model is rewritten, each
 turn, to the concrete model the routing core picks.
 
+### Install (published package)
+
+Add to `~/.npmrc` (create it if missing) this block:
+
+```ini
+@johnpozy:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:username=YOUR_GITHUB_USERNAME
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
+```
+
+Use a GitHub personal access token (classic) with the `read:packages`
+scope, see github.com, Settings, Developer settings, Personal access
+tokens.
+
+Then reference the plugin from your opencode config:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@johnpozy/codriver-opencode"]
+}
+```
+
 Local install (from a clone):
 
 ```bash
@@ -19,8 +42,6 @@ npx nx run opencode:build
   ]
 }
 ```
-
-Post-publish: `"plugin": ["@johnpozy/codriver-opencode"]`.
 
 Requires the `codriver` core (peer dependency) and a fleet config at
 `~/.config/codriver/config.json`. Tested against opencode v1.18.31 — see the
