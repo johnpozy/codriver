@@ -20,6 +20,8 @@
 export interface MockllmRequest {
   /** The `model` field of the request body; "unknown" when absent or unreadable. */
   readonly model: string;
+  /** The request's Authorization header value, when present. */
+  readonly authorization?: string;
   readonly bodyBytes: number;
 }
 
@@ -75,7 +77,11 @@ export function startMockllm(): MockllmServer {
       if (request.method === "POST" && url.pathname === "/v1/chat/completions") {
         const body = await request.text().catch(() => "");
         const model = readModelField(body);
-        requests.push({ model, bodyBytes: body.length });
+        requests.push({
+          model,
+          authorization: request.headers.get("authorization") ?? undefined,
+          bodyBytes: body.length,
+        });
         const id = `chatcmpl-mockllm-${requests.length}`;
         const created = Math.floor(Date.now() / 1000);
         const stream =
