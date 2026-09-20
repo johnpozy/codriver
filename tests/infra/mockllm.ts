@@ -1,6 +1,6 @@
 /**
  * mockllm — minimal OpenAI-compatible SSE mock for end-to-end pipeline
- * tests. Promoted from spikes/model-rewrite/mockllm.ts (spike B, PROVEN
+ * tests. Promoted from the Spike B mock provider (PROVEN
  * against opencode v1.18.31 with @ai-sdk/openai-compatible).
  *
  * POST /v1/chat/completions streams EXACTLY the spike-B SSE shape:

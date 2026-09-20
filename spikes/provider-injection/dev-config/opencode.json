@@ -1,6 +1,0 @@
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "file:///home/johnp/Documents/codriver/spikes/provider-injection/spike-provider.mjs"
-  ]
-}
