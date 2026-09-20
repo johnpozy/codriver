@@ -8,7 +8,7 @@ turn, to the concrete model the routing core picks.
 Local install (from a clone):
 
 ```bash
-npx nx run codriver-opencode:build
+npx nx run opencode:build
 ```
 
 ```json
@@ -20,7 +20,7 @@ npx nx run codriver-opencode:build
 }
 ```
 
-Post-publish: `"plugin": ["codriver-opencode"]`.
+Post-publish: `"plugin": ["@johnpozy/codriver-opencode"]`.
 
 Requires the `codriver` core (peer dependency) and a fleet config at
 `~/.config/codriver/config.json`. Tested against opencode v1.18.31 — see the

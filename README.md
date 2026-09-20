@@ -22,7 +22,7 @@ From a clone of this repo, build the adapter (this builds the `codriver` core
 first, then the opencode adapter):
 
 ```bash
-npx nx run codriver-opencode:build
+npx nx run opencode:build
 ```
 
 The built adapter entry is `packages/opencode/dist/index.js`. Reference it
