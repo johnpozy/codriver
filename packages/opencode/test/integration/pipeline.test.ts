@@ -27,6 +27,18 @@
  *      reason "jev-choice" AND mockjev's request log shows the
  *      Bearer-authenticated POST with model "jev-1.13.0" in the body.
  *
+ *  (d) proxy-mode — CODRIVER_UPSTREAM_BASE_URL=<mockllm>/v1 +
+ *      CODRIVER_UPSTREAM_API_KEY=dummy (the proxy-mode GATE; the actual
+ *      per-prefix upstream resolves from the stashed opencode cfg): the
+ *      chat.message hook no-ops (the persisted message model stays
+ *      codriver/auto, so the TUI indicator stays on Auto) and the plugin's
+ *      in-process loopback gateway owns routing. The fleet id
+ *      "mockllm/mock-model" resolves prefix "mockllm" to the opencode
+ *      mockllm provider's baseURL; mockllm's request log must therefore
+ *      show the TAIL ("mock-model") as the model and the provider's inline
+ *      apiKey ("none") as the Bearer credential — proving per-prefix
+ *      upstream resolution end-to-end — and the run still completes.
+ *
  * Isolation: all evidence (decisions.jsonl, opencode.db session files)
  * must land under the per-case tmp (XDG overrides). The afterAll audit
  * checks the real ~/.local/share/opencode with a pre-run snapshot + a
@@ -85,6 +97,10 @@ interface PipelineRun {
   readonly stderr: string;
   readonly decisionLines: readonly Record<string, unknown>[];
   readonly mockllmRequests: number;
+  /** The `model` field of every completion mockllm served, in order. */
+  readonly mockllmModels: readonly string[];
+  /** The Authorization header of every completion mockllm served, in order. */
+  readonly mockllmAuthorizations: readonly (string | undefined)[];
   readonly mockjev: MockjevServer;
 }
 
@@ -243,6 +259,8 @@ async function runPipeline(name: string, caseEnv: CaseEnvBuilder): Promise<Pipel
     delete env.CODRIVER_JEV;
     delete env.CODRIVER_JEV_SCENARIO;
     delete env.CODRIVER_CONFIG;
+    delete env.CODRIVER_UPSTREAM_BASE_URL;
+    delete env.CODRIVER_UPSTREAM_API_KEY;
     env.XDG_DATA_HOME = tmp;
     env.XDG_CONFIG_HOME = tmp;
     env.XDG_STATE_HOME = tmp;
@@ -300,6 +318,8 @@ async function runPipeline(name: string, caseEnv: CaseEnvBuilder): Promise<Pipel
       stderr,
       decisionLines,
       mockllmRequests: mockllm.requests.length,
+      mockllmModels: mockllm.requests.map((request) => request.model),
+      mockllmAuthorizations: mockllm.requests.map((request) => request.authorization),
       mockjev,
     };
   }
@@ -426,6 +446,48 @@ async function runPipeline(name: string, caseEnv: CaseEnvBuilder): Promise<Pipel
 
       // The rewrite drove the session loop: traffic hit mockllm.
       expect(run.mockllmRequests).toBeGreaterThanOrEqual(1);
+    },
+    60_000,
+  );
+
+  test(
+    "(d) proxy-mode: the gateway routes the turn — the message model stays codriver/auto",
+    async () => {
+      const run = await runPipeline("proxy-mode", (ports) => ({
+        CODRIVER_JEV: "fixture",
+        CODRIVER_UPSTREAM_BASE_URL: `http://127.0.0.1:${ports.mockllm}/v1`,
+        CODRIVER_UPSTREAM_API_KEY: DUMMY_KEY,
+      }));
+
+      expect(run.env.CODRIVER_JEV).toBe("fixture");
+      const upstreamBase = run.env.CODRIVER_UPSTREAM_BASE_URL;
+      if (upstreamBase === undefined) throw new Error("proxy-mode case: upstream base url missing");
+      expect(upstreamBase.startsWith("http://127.0.0.1:")).toBe(true);
+      expect(upstreamBase.endsWith("/v1")).toBe(true);
+      expect(run.env.CODRIVER_UPSTREAM_API_KEY).toBe(DUMMY_KEY);
+      expect(run.env.TYPESAFE_API_KEY).toBeUndefined();
+
+      // Full round-trip through the in-process gateway: opencode →
+      // gateway (routing + model rewrite) → mockllm (SSE) → back.
+      expect(run.status).toBe(0);
+      expect(run.stdout.trim().length).toBeGreaterThan(0);
+      expect(run.stdout).toContain("ok");
+      expect(existsSync(join(run.tmp, "opencode", "opencode.db"))).toBe(true);
+
+      // The routing decision, made INSIDE the gateway this time.
+      expect(run.decisionLines.length).toBeGreaterThan(0);
+      expect(lastDecision(run)).toMatchObject({
+        reason: "jev-choice",
+        usedFallback: false,
+        model: { providerID: "mockllm", modelID: "mock-model" },
+      });
+
+      // The prefix "mockllm" resolved to the opencode mockllm provider:
+      // the TAIL is the forwarded model and the provider's inline apiKey
+      // is the Bearer credential — per-prefix upstream resolution, live.
+      expect(run.mockllmRequests).toBeGreaterThanOrEqual(1);
+      expect(run.mockllmModels.at(-1)).toBe("mock-model");
+      expect(run.mockllmAuthorizations.at(-1)).toBe("Bearer none");
     },
     60_000,
   );
