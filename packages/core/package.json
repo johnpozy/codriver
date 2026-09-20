@@ -1,6 +1,6 @@
 {
   "name": "@johnpozy/codriver",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": "https://github.com/johnpozy/codriver",
   "description": "Framework-agnostic per-turn model-routing core: Jev client, fleet config, routing policy, and decision logging.",
   "keywords": [
